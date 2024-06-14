@@ -16,5 +16,9 @@ Một repo tự động hoá việc tra cứu điểm Đánh giá Năng lực.
 5. Chạy chương trình, và hi vọng nó thành công (nếu ko thành công thì mở issue trên github hoặc liên hệ)
 
 -----
+# Lưu ý
+this code is not guaranteed to work 100% every year, có thể trang đgnl sẽ đổi, hoặc internals overhaul trong code chính web tra điểm. tới đó m tự sửa, hoặc liên hệ hoặc mở issue
+
+-----
 # License
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
