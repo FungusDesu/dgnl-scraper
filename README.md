@@ -1,5 +1,5 @@
 # dgnl-scraper
-Một repo tự động hoá việc tra cứu điểm Đánh giá Năng lực.
+ai sẽ thắng, trang web tạo bởi trường mang danh HCMUS được bảo vệ bởi recaptcha, hay là 1 thằng khoái miku rảnh hơi
 
 -----
 # Đòi hỏi
