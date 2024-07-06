@@ -1,5 +1,5 @@
 # dgnl-scraper
-ai sẽ thắng, trang web tạo bởi trường mang danh HCMUS được bảo vệ bởi recaptcha, hay là 1 thằng khoái miku rảnh hơi
+soy la javscript god
 
 -----
 # Đòi hỏi
