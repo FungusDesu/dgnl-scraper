@@ -16,7 +16,7 @@ soy la javscript god
 
 -----
 # Lưu ý
-để tránh nặng máy, code sẽ xử lý tối đa 100 dữ liệu, từ entry 1-100, 101-200 và vân vân. để đổi nơi lý, tại `index.js`, đổi tham số `BATCH_NUMBER` (ví dụ nếu muốn xử lý entry 1-100 thì đổi thành `1`, từ 101-200 đổi thành `2`, vân vân)
+để tránh nặng máy, code sẽ xử lý tối đa 100 dữ liệu, từ entry 1-100, 101-200 và vân vân. để đổi nơi xử lý, tại `index.js`, đổi tham số `BATCH_NUMBER` (ví dụ nếu muốn xử lý entry 1-100 thì đổi thành `1`, từ 101-200 đổi thành `2`, vân vân)
 
 this code is not guaranteed to work 100% every year, có thể trang đgnl sẽ đổi, hoặc internals overhaul trong code chính web tra điểm, nếu có trục trặc, mở issue hoặc DM fungusdesu
 
