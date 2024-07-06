@@ -1,3 +1,16 @@
+const ms = require(`pretty-ms`);
+const puppeteer = require(`puppeteer`);
+const fs = require(`fs`);
+
+const BATCH_NUMBER = 1;
+
+function createProgressBar(percentage) { // percentage should be from 0 to 1 only
+    const loadedBarCount = Math.round(percentage * 20);
+    const progressBar = Array(20).fill(`▱`).fill(`▰`, 0, loadedBarCount).join(``);
+
+    return `【${progressBar}】${percentage * 100}%`;
+}
+
 function plainTextToObject(string) {
     // Remove irrelevant information
     const startIndex = string.indexOf('*');
@@ -38,20 +51,26 @@ function HTMLtoPlainText(input) {
     return html;
 }
 
-const puppeteer = require(`puppeteer`);
-const fs = require(`fs`);
+async function fetchData(p) {
+    const rawData = await p.evaluate(() => {
+        const element = document.querySelector('dd#lblKetQuaThi');
+        return element.innerHTML;
+    });
 
-console.log(`preparing to launch`);
+    const data = plainTextToObject(HTMLtoPlainText(rawData));
+    return data;
+}
 
-const nameArray = require(`./information/name.json`);
-const classArray = require(`./information/class.json`);
-const cccdArray = require(`./information/CCCD.json`);
-const emailArray = require(`./information/email.json`);
+const nameArray = fs.readFileSync(`./information/name.txt`,
+    { encoding: 'utf8', flag: 'r' }).split('\n').slice(BATCH_NUMBER * 100 - 100, BATCH_NUMBER * 100);
+const cccdArray = fs.readFileSync(`./information/CCCD.txt`,
+    { encoding: 'utf8', flag: 'r' }).split('\n').slice(BATCH_NUMBER * 100 - 100, BATCH_NUMBER * 100);
+const emailArray = fs.readFileSync(`./information/email.txt`,
+    { encoding: 'utf8', flag: 'r' }).split('\n').slice(BATCH_NUMBER * 100 - 100, BATCH_NUMBER * 100);
 
 const listlength = cccdArray.length;
 
 let nameResult = [];
-let classResult = [];
 let cccdResult = [];
 let emailResult = [];
 
@@ -65,30 +84,25 @@ let exam1Result = [];
 let exam2Result = [];
 
 (async () => {
-
-
     // Initiate browser
+    const startTime = Date.now();
     const browser = await puppeteer.launch();
 
-    console.log(`browser launched, enumeration begins now`)
-
     for (let index = 0; index < listlength; index++) {
-        console.log(`Đang tìm dữ liệu ${nameArray[index]} lớp ${classArray[index]} cccd ${cccdArray[index]} email ${emailArray[index]}...`)
+        console.clear();
+        console.log(createProgressBar(index / listlength));
+        console.log(`• Entry: ${index + 1}/${listlength}`);
+        console.log(`• Fetched: ${nameResult.length}, Rejected: ${index - nameResult.length}`);
+        console.log(`• Average speed: ${ms((Date.now() - startTime) / (index + 1))}/entry`);
+        console.log(`• Elapsed time: ${ms(Date.now() - startTime, { verbose: true })}`);
+        console.log(`• Estimated time left: ${ms((Date.now() - startTime) / (index + 1) * (listlength - (index + 1)), { verbose: true })}\n`);
+
+        console.log(`Last person fetched: ${nameResult[nameResult.length - 1]} - [${TVResult[TVResult.length - 1]}, ${TAResult[TAResult.length - 1]}, ${TLPResult[TLPResult.length - 1]}, ${KHTNResult[KHTNResult.length - 1]}, ${KHXHResult[KHXHResult.length - 1]}] -> ${TVResult[TVResult.length - 1] + TAResult[TAResult.length - 1] + TLPResult[TLPResult.length - 1] + KHTNResult[KHTNResult.length - 1] + KHXHResult[KHXHResult.length - 1]}`);
 
         const page = await browser.newPage();
 
         // Navigate
         await page.goto('https://thinangluc.vnuhcm.edu.vn/dgnl/tra-thong-tin-ket-qua-thi');
-
-        async function fetchData(p) {
-            const rawData = await p.evaluate(() => {
-                const element = document.querySelector('dd#lblKetQuaThi');
-                return element.innerHTML;
-            });
-
-            const data = plainTextToObject(HTMLtoPlainText(rawData));
-            return data;
-        }
 
         let didExam1 = false;
         let didExam2 = false;
@@ -103,31 +117,27 @@ let exam2Result = [];
                 continue;
             }
 
-            await page.select(`#cboDotDuThi`, '8');
-            await page.$eval('#txtSoBaoDanh', (el, value) => el.value = value, cccdArray[index]);
-            await page.$eval('#txtEmail', (el, value) => el.value = value, emailArray[index]);
-    
-            await page.click(`#bntSearch`);
-    
-            await page.waitForNetworkIdle();
+            try {
+                await page.select(`#cboDotDuThi`, '8');
+                await page.$eval('#txtSoBaoDanh', (el, value) => el.value = value, cccdArray[index]);
+                await page.$eval('#txtEmail', (el, value) => el.value = value, emailArray[index]);
+
+                await page.click(`#bntSearch`);
+
+                await page.waitForNetworkIdle();
+            } catch (err) {
+                console.log(`Unresponsive, trying again`);
+                continue;
+            }
 
             const mightBeData1 = await fetchData(page);
 
             if (mightBeData1.TV) {
                 didExam1 = true;
-
-                console.log(`${nameArray[index]} lớp ${classArray[index]} có thi đgnl đợt 1 ${Object.entries(mightBeData1).map(([key, val]) => `${key}: ${val}`).join(`, `)}`);
-
                 exam1Result.push(...Object.values(mightBeData1));
 
                 break;
             }
-
-            console.log(`không tìm được dữ liệu học sinh, đang thử lại`);
-        }
-
-        if (!didExam1) {
-            console.log(`${nameArray[index]} lớp ${classArray[index]} không thi đgnl đợt 1, hoặc đã có lỗi xảy ra khi tìm dữ liệu`);
         }
 
         await page.reload();
@@ -141,36 +151,31 @@ let exam2Result = [];
                 console.log(`Unresponsive, trying again`);
                 continue;
             }
-            
-            await page.$eval('#txtSoBaoDanh', (el, value) => el.value = value, cccdArray[index]);
-            await page.$eval('#txtEmail', (el, value) => el.value = value, emailArray[index]);
-    
-            await page.click(`#bntSearch`);
-    
-            await page.waitForNetworkIdle();
+
+            try {
+                await page.$eval('#txtSoBaoDanh', (el, value) => el.value = value, cccdArray[index]);
+                await page.$eval('#txtEmail', (el, value) => el.value = value, emailArray[index]);
+
+                await page.click(`#bntSearch`);
+
+                await page.waitForNetworkIdle();
+            } catch (err) {
+                console.log(`Unresponsive, trying again`);
+                continue;
+            }
 
             const mightBeData = await fetchData(page);
 
             if (mightBeData.TV) {
                 didExam2 = true;
-
-                console.log(`${nameArray[index]} lớp ${classArray[index]} có thi đgnl đợt 2 ${Object.entries(mightBeData).map(([key, val]) => `${key}: ${val}`).join(`, `)}`);
-
                 exam2Result.push(...Object.values(mightBeData));
 
                 break;
             }
-
-            console.log(`không tìm được dữ liệu học sinh, đang thử lại`);
-        }
-
-        if (!didExam2) {
-            console.log(`${nameArray[index]} lớp ${classArray[index]} không thi đgnl đợt 2, hoặc đã có lỗi xảy ra khi tìm dữ liệu`);
         }
 
         if (didExam1 != didExam2) {
             nameResult.push(nameArray[index]);
-            classResult.push(classArray[index]);
             cccdResult.push(cccdArray[index]);
             emailResult.push(emailArray[index]);
 
@@ -180,8 +185,6 @@ let exam2Result = [];
                 TLPResult.push(exam1Result[2]);
                 KHTNResult.push(exam1Result[3]);
                 KHXHResult.push(exam1Result[4]);
-
-                console.log(`${nameArray[index]} lớp ${classArray[index]} chỉ thi đợt 1, sẽ lấy điểm đợt 1`);
             }
 
             if (didExam2) {
@@ -190,14 +193,11 @@ let exam2Result = [];
                 TLPResult.push(exam2Result[2]);
                 KHTNResult.push(exam2Result[3]);
                 KHXHResult.push(exam2Result[4]);
-
-                console.log(`${nameArray[index]} lớp ${classArray[index]} chỉ thi đợt 2, sẽ lấy điểm đợt 2`);
             }
         }
 
         if (didExam1 && didExam2) {
             nameResult.push(nameArray[index]);
-            classResult.push(classArray[index]);
             cccdResult.push(cccdArray[index]);
             emailResult.push(emailArray[index]);
 
@@ -207,37 +207,39 @@ let exam2Result = [];
                 TLPResult.push(exam1Result[2]);
                 KHTNResult.push(exam1Result[3]);
                 KHXHResult.push(exam1Result[4]);
-
-                console.log(`${nameArray[index]} lớp ${classArray[index]} thi cả 2 đợt, sẽ lấy điểm đợt 1`);
             } else if (exam1Result.reduce((partialSum, a) => partialSum + a, 0) < exam2Result.reduce((partialSum, a) => partialSum + a, 0)) {
                 TVResult.push(exam2Result[0]);
                 TAResult.push(exam2Result[1]);
                 TLPResult.push(exam2Result[2]);
                 KHTNResult.push(exam2Result[3]);
                 KHXHResult.push(exam2Result[4]);
-
-                console.log(`${nameArray[index]} lớp ${classArray[index]} thi cả 2 đợt, sẽ lấy điểm đợt 2`);
             } else {
                 TVResult.push(exam2Result[0]);
                 TAResult.push(exam2Result[1]);
                 TLPResult.push(exam2Result[2]);
                 KHTNResult.push(exam2Result[3]);
                 KHXHResult.push(exam2Result[4]);
-
-                console.log(`${nameArray[index]} lớp ${classArray[index]} thi cả 2 đợt, sẽ lấy điểm đợt gần đây nhất`);
             }
         }
 
-        console.log(`-------------------------`)
         exam1Result = [];
         exam2Result = [];
-        
+
+        console.clear();
+        console.log(createProgressBar(index / listlength));
+        console.log(`• Entry: ${index + 1}/${listlength}`);
+        console.log(`• Fetched: ${nameResult.length}, Rejected: ${index - nameResult.length}`);
+        console.log(`• Average speed: ${ms((Date.now() - startTime) / (index + 1))}/entry`);
+        console.log(`• Elapsed time: ${ms(Date.now() - startTime, { verbose: true })}`);
+        console.log(`• Estimated time left: ${ms((Date.now() - startTime) / (index + 1) * (listlength - (index + 1)), { verbose: true })}\n`);
+
+        console.log(`Last person fetched: ${nameResult[nameResult.length - 1]} - [${TVResult[TVResult.length - 1]}, ${TAResult[TAResult.length - 1]}, ${TLPResult[TLPResult.length - 1]}, ${KHTNResult[KHTNResult.length - 1]}, ${KHXHResult[KHXHResult.length - 1]}] -> ${TVResult[TVResult.length - 1] + TAResult[TAResult.length - 1] + TLPResult[TLPResult.length - 1] + KHTNResult[KHTNResult.length - 1] + KHXHResult[KHXHResult.length - 1]}`);
+
         await page.close();
     }
     await browser.close();
 
     fs.writeFileSync(`./results/name.txt`, nameResult.join(`\n`));
-    fs.writeFileSync(`./results/class.txt`, classResult.join(`\n`));
     fs.writeFileSync(`./results/cccd.txt`, cccdResult.join(`\n`));
     fs.writeFileSync(`./results/email.txt`, emailResult.join(`\n`));
     fs.writeFileSync(`./results/TV.txt`, TVResult.join(`\n`));
@@ -246,3 +248,29 @@ let exam2Result = [];
     fs.writeFileSync(`./results/KHTN.txt`, KHTNResult.join(`\n`));
     fs.writeFileSync(`./results/KHXH.txt`, KHXHResult.join(`\n`));
 })();
+
+process.on('uncaughtException', () => {
+    console.log(`SOMETHING WENT WRONG. WRITING ANYWAY`);
+
+    fs.writeFileSync(`./results/name.txt`, nameResult.join(`\n`));
+    fs.writeFileSync(`./results/cccd.txt`, cccdResult.join(`\n`));
+    fs.writeFileSync(`./results/email.txt`, emailResult.join(`\n`));
+    fs.writeFileSync(`./results/TV.txt`, TVResult.join(`\n`));
+    fs.writeFileSync(`./results/TA.txt`, TAResult.join(`\n`));
+    fs.writeFileSync(`./results/TLP.txt`, TLPResult.join(`\n`));
+    fs.writeFileSync(`./results/KHTN.txt`, KHTNResult.join(`\n`));
+    fs.writeFileSync(`./results/KHXH.txt`, KHXHResult.join(`\n`));
+});
+
+process.on('unhandledRejection', () => {
+    console.log(`SOMETHING WENT WRONG. WRITING ANYWAY`);
+
+    fs.writeFileSync(`./results/name.txt`, nameResult.join(`\n`));
+    fs.writeFileSync(`./results/cccd.txt`, cccdResult.join(`\n`));
+    fs.writeFileSync(`./results/email.txt`, emailResult.join(`\n`));
+    fs.writeFileSync(`./results/TV.txt`, TVResult.join(`\n`));
+    fs.writeFileSync(`./results/TA.txt`, TAResult.join(`\n`));
+    fs.writeFileSync(`./results/TLP.txt`, TLPResult.join(`\n`));
+    fs.writeFileSync(`./results/KHTN.txt`, KHTNResult.join(`\n`));
+    fs.writeFileSync(`./results/KHXH.txt`, KHXHResult.join(`\n`));
+});
